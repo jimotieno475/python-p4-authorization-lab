@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, make_response, jsonify, request, session
+from flask import Flask, make_response, jsonify, request, session,abort
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 
@@ -87,12 +87,31 @@ class CheckSession(Resource):
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        # Check if the user is signed in
+        user = User.query.filter(User.id == session.get('user_id')).first()
+        if user:
+            # User is signed in, retrieve and return JSON data for members-only articles
+            members_only_articles = [article.to_dict() for article in Article.query.filter(Article.is_member_only == True).all()]
+            return members_only_articles, 200
+        else:
+            # User is not signed in, return 401 unauthorized
+            abort(401, message="Not authorized to view members-only articles")
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+        # Check if the user is signed in
+        user = User.query.filter(User.id == session.get('user_id')).first()
+        if user:
+            # User is signed in, retrieve and return JSON data for the specific members-only article
+            article = Article.query.filter(Article.id == id, Article.is_member_only == True).first()
+            if article:
+                return article.to_dict(), 200
+            else:
+                abort(404, 'message'':'"Article not found")
+        else:
+            # User is not signed in, return 401 unauthorized
+            abort(401, message="Not authorized to view members-only articles")
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
